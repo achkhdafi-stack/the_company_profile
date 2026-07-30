@@ -1,11 +1,12 @@
 // src/components/Navbar.jsx
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { Search, Menu } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Search, Menu, X, LogIn, LayoutDashboard } from "lucide-react";
 import Dropdown from "./Dropdown";
 import Sidebar from "./Sidebar";
 import menu from "../data/menu";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 // Class navbar item: teks abu-abu default, merah + underline saat
 // hover ATAU saat halaman ini sedang aktif (isActive dari NavLink).
@@ -20,7 +21,20 @@ function navItemClass({ isActive }) {
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { language, toggleLanguage } = useLanguage();
+  const { session } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+    setSearchQuery("");
+  };
 
   return (
     <>
@@ -43,7 +57,7 @@ export default function Navbar() {
           <ul className="hidden items-center gap-1 lg:flex">
             {menu.map((item) => (
               <li
-                key={`${item.path}`}
+                key={item.path}
                 className="relative"
                 onMouseEnter={() => setOpenMenu(item.label.id)}
                 onMouseLeave={() => setOpenMenu(null)}
@@ -51,18 +65,8 @@ export default function Navbar() {
                 <NavLink to={item.path} className={navItemClass}>
                   {item.label[language]}
                   {item.children && (
-                    <svg
-                      className="h-3 w-3 text-slate-400"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                    >
-                      <path
-                        d="M2 4l4 4 4-4"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                    <svg className="h-3 w-3 text-slate-400" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </NavLink>
@@ -76,13 +80,44 @@ export default function Navbar() {
           </ul>
 
           {/* Right actions */}
-          <div className="flex items-center gap-4">
-            <button
-              aria-label="Cari"
-              className="hidden h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 lg:flex"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Search - klik untuk buka input, submit untuk cari */}
+            <div className="hidden items-center lg:flex">
+              {searchOpen ? (
+                <form onSubmit={handleSearchSubmit} className="flex items-center">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={() => {
+                      if (!searchQuery) setSearchOpen(false);
+                    }}
+                    placeholder={language === "id" ? "Cari di web ini..." : "Search this site..."}
+                    className="w-56 rounded-full border border-slate-200 py-1.5 pl-4 pr-3 text-sm outline-none transition focus:border-red-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                    }}
+                    aria-label="Tutup pencarian"
+                    className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </form>
+              ) : (
+                <button
+                  aria-label="Cari"
+                  onClick={() => setSearchOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              )}
+            </div>
 
             {/* Toggle bahasa ID / EN */}
             <div className="hidden items-center gap-1 text-xs font-semibold uppercase lg:flex">
@@ -104,6 +139,16 @@ export default function Navbar() {
                 EN
               </button>
             </div>
+
+            {/* Login / Dashboard - otomatis berubah sesuai status login */}
+            <Link
+              to={session ? "/admin" : "/admin/login"}
+              aria-label={session ? "Buka Dashboard Admin" : "Masuk Admin"}
+              title={session ? "Dashboard Admin" : "Masuk Admin"}
+              className="hidden h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 lg:flex"
+            >
+              {session ? <LayoutDashboard className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+            </Link>
 
             <button
               aria-label="Buka menu"

@@ -33,10 +33,29 @@ export function AuthProvider({ children }) {
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password });
 
+  const signInWithGoogle = () =>
+    supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/admin` },
+    });
+
   const signOut = () => supabase.auth.signOut();
 
+  // Update nama tampilan (disimpan di user_metadata.full_name Supabase Auth)
+  const updateProfile = async ({ fullName }) => {
+    const { data, error } = await supabase.auth.updateUser({
+      data: { full_name: fullName },
+    });
+    if (!error && data?.user) {
+      // Refresh session lokal supaya perubahan langsung kelihatan di UI
+      const { data: sessionData } = await supabase.auth.getSession();
+      setSession(sessionData.session);
+    }
+    return { data, error };
+  };
+
   return (
-    <AuthContext.Provider value={{ session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, loading, signIn, signInWithGoogle, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
